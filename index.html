@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>WIOA Career Pathway Generator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React 18 UMD + ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <!-- Babel for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-gray-50">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useMemo, useRef, useState, useEffect } = React; // 🔵 NEW: added useEffect
+
+    // 🔵 NEW: Storage helpers
+    const STORAGE_KEY = "wioa_pathways_v1";
+    const loadRecords = () => {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; }
+    };
+    const saveRecords = (records) => localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+
+    const PHASES = [
+      { key: "engagement", label: "Engagement / Eligibility" },
+      { key: "assessment", label: "Assessment / ISS" },
+      { key: "career", label: "Career Services" },
+      { key: "training", label: "Training" },
+      { key: "support", label: "Supportive Services" },
+      { key: "placement", label: "Placement" },
+      { key: "followup", label: "Follow-Up (Qtr 1–4)" },
+    ];
+
+    const BARRIER_LIBRARY = [
+      { key: "transport", label: "Transportation", recommend: ["Bus pass / gas card", "Car repair quote + invoice"] },
+      { key: "childcare", label: "Childcare", recommend: ["Childcare referral", "Supportive services policy + receipt"] },
+      { key: "housing", label: "Housing Instability", recommend: ["One-time rent/utility support", "Utility support"] },
+      { key: "justice", label: "Justice-Involved", recommend: ["Reentry program (e.g., Metro 180)"] },
+      { key: "language", label: "Limited English", recommend: ["ESL referral"] },
+      { key: "disability", label: "Disability", recommend: ["VR referral", "Accommodation plan"] },
+      { key: "other", label: "Other", recommend: ["Detail in casenote"] },
+      { key: "parenting/pregnant", label: "Parenting", recommend: ["Childcare, Referral, SNAP"] },
+      { key: "homeless", label: "Experiencing Homelessness", recommend: ["Housing Support, Rental Support, Legal Aid"] },
+      { key: "fostercare", label: "In or aged out of fostercare", recommend: ["Referrals"] },
+      { key: "HS dropout", label: "High School Dropout", recommend: ["GED program", "Diploma Recovery", "GED Prep"] },
+      { key: "work", label: "Limited Work Experience", recommend: ["Soft skills Coaching", "Work Experience"] },
+    ];
+
+    const ACTIVITY_LIBRARY = [
+      { key: "orientation", phase: "engagement", label: "WIOA Orientation + NEWORKS" },
+      { key: "eligibility", phase: "engagement", label: "Eligibility Verification" },
+      { key: "assessments", phase: "assessment", label: "NCRC" },
+      { key: "OAS", phase: "engagement", label: "Objective Assessment" },
+      { key: "ONET", phase: "assessment", label: "ONET" },
+      { key: "iss", phase: "assessment", label: "ISS Goals + Objectives" },
+      { key: "resume", phase: "career", label: "Resume + Interview Coaching" },
+      { key: "jobsearch", phase: "career", label: "Job Search (Staff Assisted)" },
+      { key: "ita", phase: "training", label: "ITA for Occupational Training" },
+      { key: "wex", phase: "training", label: "Work Experience (WEX)" },
+      { key: "ojt", phase: "training", label: "On-the-Job Training (OJT)" },
+      { key: "support", phase: "support", label: "Supportive Services" },
+      { key: "placement", phase: "placement", label: "Job Placement + Retention Plan" },
+      { key: "MSG", phase: "assessment", label: "Measureable Skills Gain" },
+      { key: "cred", phase: "followup", label: "Credential" },
+      { key: "follow", phase: "followup", label: "Follow-Up Contacts" },
+      { key: "incentive", phase: "followup", label: "Activity Incentives" },
+      { key: "ONET", phase: "assessment", label: "Interest Profiler" },
+      { key: "Monthly Contact", phase: "engagement", label: "Monthly contact with CN" },
+      { key: "Apprenticeship", phase: "training", label: "Apprenticeship" },
+    ];
+
+    const STATUS_COLORS = {
+      "Planned": "bg-sky-100 text-sky-900 border-sky-300",
+      "In Progress": "bg-amber-100 text-amber-900 border-amber-300",
+      "Completed": "bg-emerald-100 text-emerald-900 border-emerald-300",
+    };
+
+    function SectionTitle({ children, emoji }) {
+      return (
+        <div className="flex items-center gap-2 text-lg font-semibold">
+          <span className="text-xl">{emoji}</span>
+          <span>{children}</span>
+        </div>
+      );
+    }
+
+    function Field({ label, hint, children }) {
+      return (
+        <div className="space-y-2">
+          <div className="text-sm font-medium text-gray-700">{label}</div>
+          {children}
+          {hint ? <div className="text-xs text-gray-500">{hint}</div> : null}
+        </div>
+      );
+    }
+
+    function App() {
+      const [participant, setParticipant] = useState({
+        name: "Client Name",
+        age: 20,
+        population: "Youth (14–24)",
+        education: "HS Diploma / GED",
+        veteran: false,
+        targetOccupation: "Target Career",
+        wageGoal: 22,
+        timelineMonths: 12,
+        credentialTarget: "Expected MSG/Credentials",
+      });
+
+      const [barriers, setBarriers] = useState(["transport"]);
+      const [activities, setActivities] = useState([
+        mkAct("orientation"),
+        mkAct("eligibility"),
+        mkAct("assessments", "Completed"),
+        mkAct("iss", "In Progress"),
+        mkAct("resume"),
+        mkAct("ita"),
+        mkAct("wex"),
+        mkAct("support"),
+        mkAct("placement"),
+        mkAct("follow"),
+      ]);
+
+      const [notes, setNotes] = useState(
+        "Goal: entry-level maintenance role at $22/hr within 6 months. Training via ITA + WEX at partner site. Supportive services for transportation (gas card) during first 2 pay periods."
+      );
+      const [compact, setCompact] = useState(false);
+      const [jsonText, setJsonText] = useState("");
+
+      // 🔵 NEW: Records state
+      const [records, setRecords] = useState([]);
+      const [selectedId, setSelectedId] = useState("");
+
+      useEffect(() => { setRecords(loadRecords()); }, []);
+
+      function mkAct(key, status = "Planned") {
+        const lib = ACTIVITY_LIBRARY.find(a => a.key === key);
+        return {
+          id: `${key}-${Math.random().toString(36).slice(2, 8)}`,
+          label: lib?.label || "Custom Step",
+          phase: lib?.phase || "career",
+          status,
+        };
+      }
+
+      function addActivityFromLibrary(key) {
+        setActivities(prev => [...prev, mkAct(key)]);
+      }
+
+      function addCustomActivity() {
+        setActivities(prev => [
+          ...prev,
+          { id: `custom-${Math.random().toString(36).slice(2, 8)}`, label: "Custom Step", phase: "career", status: "Planned" },
+        ]);
+      }
+
+      function updateActivity(id, updates) {
+        setActivities(prev => prev.map(a => (a.id === id ? { ...a, ...updates } : a)));
+      }
+
+      function removeActivity(id) {
+        setActivities(prev => prev.filter(a => a.id !== id));
+      }
+
+      const recommendedSupports = useMemo(() => {
+        const items = [];
+        barriers.forEach(b => {
+          const bary = BARRIER_LIBRARY.find(x => x.key === b);
+          if (!bary) return;
+          bary.recommend.forEach(r => items.push({ phase: "support", label: r }));
+        });
+        if (String(participant.population).toLowerCase().includes("youth")) {
+          items.push({ phase: "followup", label: "Quarterly MSG + Credential Check" });
+        }
+        return items;
+      }, [barriers, participant.population]);
+
+      const phaseBuckets = useMemo(() => {
+        const base = {
+          engagement: [], assessment: [], career: [], training: [], support: [], placement: [], followup: [],
+        };
+        activities.forEach(a => base[a.phase].push(a));
+        recommendedSupports.forEach((r, idx) => {
+          base[r.phase].push({ id: `rec-${idx}`, label: r.label, phase: r.phase, status: "Planned" });
+        });
+        Object.keys(base).forEach(k => {
+          base[k] = base[k].sort((a, b) => statusRank(a.status) - statusRank(b.status));
+        });
+        return base;
+      }, [activities, recommendedSupports]);
+
+      function statusRank(s) {
+        return s === "Completed" ? 2 : s === "In Progress" ? 1 : 0;
+      }
+
+      function exportJSON() {
+        const payload = { participant, barriers, activities, notes };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${participant.name || "participant"}_pathway.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+
+      function importJSON() {
+        try {
+          const obj = JSON.parse(jsonText);
+          if (obj.participant) setParticipant(obj.participant);
+          if (obj.barriers) setBarriers(obj.barriers);
+          if (obj.activities) setActivities(obj.activities);
+          if (obj.notes) setNotes(obj.notes);
+        } catch {
+          alert("Invalid JSON");
+        }
+      }
+
+      // 🔵 NEW: Save/Load/Delete to localStorage
+      function saveToLibrary() {
+        const id = selectedId || crypto.randomUUID();
+        const name = participant.name?.trim() || "Unnamed";
+        const payload = {
+          id,
+          name,
+          savedAt: new Date().toISOString(),
+          data: { participant, barriers, activities, notes },
+        };
+        const next = records.filter(r => r.id !== id).concat(payload).sort((a,b)=>a.name.localeCompare(b.name));
+        setRecords(next);
+        saveRecords(next);
+        setSelectedId(id);
+        alert(`Saved pathway for "${name}".`);
+      }
+
+      function loadFromLibrary(id) {
+        const rec = records.find(r => r.id === id);
+        if (!rec) return;
+        const { participant: p, barriers: b, activities: a, notes: n } = rec.data;
+        setParticipant(p); setBarriers(b); setActivities(a); setNotes(n);
+        setSelectedId(id);
+      }
+
+      function deleteFromLibrary(id) {
+        const rec = records.find(r => r.id === id);
+        if (!rec) return;
+        if (!confirm(`Delete saved pathway for "${rec.name}"?`)) return;
+        const next = records.filter(r => r.id !== id);
+        setRecords(next);
+        saveRecords(next);
+        if (selectedId === id) setSelectedId("");
+      }
+
+      return (
+        <div className={`min-h-screen w-full ${compact ? "p-2" : "p-6"}`}>
+          <div className="mx-auto max-w-7xl">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h1 className="text-2xl font-bold">WIOA Career Pathway Generator</h1>
+                <p className="text-sm text-gray-600">
+                  Turn demographics, goals, barriers, and activities into a visual Career Pathway you can print or export.
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input type="checkbox" className="h-4 w-4" checked={compact} onChange={e => setCompact(e.target.checked)} />
+                  Compact
+                </label>
+                <button onClick={exportJSON} className="px-3 py-2 text-sm rounded-md border bg-white hover:bg-gray-50">Export JSON</button>
+                <button onClick={() => window.print()} className="px-3 py-2 text-sm rounded-md border bg-white hover:bg-gray-50">Print</button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 print:grid-cols-3">
+              {/* Left: Inputs */}
+              <div className="lg:col-span-1 print:col-span-1">
+                <div className="p-4 space-y-6 bg-white rounded-xl border shadow-sm">
+                  <SectionTitle emoji="🧑‍💼">Participant</SectionTitle>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Name">
+                      <input className="w-full h-10 px-3 border rounded-md" value={participant.name}
+                        onChange={e => setParticipant({ ...participant, name: e.target.value })}/>
+                    </Field>
+                    <Field label="Age">
+                      <input type="number" className="w-full h-10 px-3 border rounded-md" value={participant.age}
+                        onChange={e => setParticipant({ ...participant, age: Number(e.target.value) })}/>
+                    </Field>
+                    <Field label="Population">
+                      <select className="w-full h-10 px-3 border rounded-md" value={participant.population}
+                        onChange={e => setParticipant({ ...participant, population: e.target.value })}>
+                        <option>Adult (25+)</option>
+                        <option>Dislocated Worker</option>
+                        <option>Youth (14–24)</option>
+                      </select>
+                    </Field>
+                    <Field label="Education Level">
+                      <select className="w-full h-10 px-3 border rounded-md" value={participant.education}
+                        onChange={e => setParticipant({ ...participant, education: e.target.value })}>
+                        <option>No HS Diploma</option>
+                        <option>HS Diploma / GED</option>
+                        <option>Some College</option>
+                        <option>Associate</option>
+                        <option>Bachelor+</option>
+                      </select>
+                    </Field>
+                    <Field label="Veteran">
+                      <label className="flex items-center h-10 px-3 border rounded-md bg-white gap-2">
+                        <input type="checkbox" checked={participant.veteran}
+                          onChange={e => setParticipant({ ...participant, veteran: e.target.checked })}/>
+                        <span className="text-sm text-gray-700">Yes</span>
+                      </label>
+                    </Field>
+                  </div>
+
+                  <SectionTitle emoji="🎯">Goals</SectionTitle>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Target Occupation">
+                      <input className="w-full h-10 px-3 border rounded-md" value={participant.targetOccupation}
+                        onChange={e => setParticipant({ ...participant, targetOccupation: e.target.value })}/>
+                    </Field>
+                    <Field label="Wage Goal ($/hr)">
+                      <input type="number" className="w-full h-10 px-3 border rounded-md" value={participant.wageGoal}
+                        onChange={e => setParticipant({ ...participant, wageGoal: Number(e.target.value) })}/>
+                    </Field>
+                    <Field label="Timeline (months)">
+                      <input type="number" className="w-full h-10 px-3 border rounded-md" value={participant.timelineMonths}
+                        onChange={e => setParticipant({ ...participant, timelineMonths: Number(e.target.value) })}/>
+                    </Field>
+                    <Field label="Credential Target(s)">
+                      <input className="w-full h-10 px-3 border rounded-md" value={participant.credentialTarget}
+                        onChange={e => setParticipant({ ...participant, credentialTarget: e.target.value })}/>
+                    </Field>
+                  </div>
+
+                  <SectionTitle emoji="🧱">Barriers</SectionTitle>
+                  <div className="grid grid-cols-2 gap-2">
+                    {BARRIER_LIBRARY.map(b => (
+                      <label key={b.key} className="flex items-center gap-2 text-sm p-2 rounded-md border bg-white">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4"
+                          checked={barriers.includes(b.key)}
+                          onChange={e => {
+                            setBarriers(prev => e.target.checked ? [...prev, b.key] : prev.filter(x => x !== b.key));
+                          }}
+                        />
+                        {b.label}
+                      </label>
+                    ))}
+                  </div>
+
+                  <SectionTitle emoji="✅">Activities</SectionTitle>
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <select className="flex-1 h-10 px-3 border rounded-md" defaultValue=""
+                        onChange={e => { if (e.target.value) { addActivityFromLibrary(e.target.value); e.target.value = ""; }}}>
+                        <option value="" disabled>Add from library…</option>
+                        {ACTIVITY_LIBRARY.map(a => (
+                          <option key={a.key} value={a.key}>{a.label}</option>
+                        ))}
+                      </select>
+                      <button onClick={addCustomActivity} className="px-3 py-2 text-sm rounded-md border bg-white hover:bg-gray-50">Custom</button>
+                    </div>
+
+                    <div className="space-y-2 max-h-64 overflow-auto pr-1">
+                      {activities.map(a => (
+                        <div key={a.id} className="grid grid-cols-12 items-center gap-2 p-2 rounded-md border bg-white">
+                          <div className="col-span-5">
+                            <input className="w-full h-9 px-2 border rounded-md" value={a.label}
+                              onChange={e => updateActivity(a.id, { label: e.target.value })}/>
+                          </div>
+                          <div className="col-span-3">
+                            <select className="w-full h-9 px-2 border rounded-md" value={a.phase}
+                              onChange={e => updateActivity(a.id, { phase: e.target.value })}>
+                              {PHASES.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
+                            </select>
+                          </div>
+                          <div className="col-span-3">
+                            <select className="w-full h-9 px-2 border rounded-md" value={a.status}
+                              onChange={e => updateActivity(a.id, { status: e.target.value })}>
+                              <option>Planned</option>
+                              <option>In Progress</option>
+                              <option>Completed</option>
+                            </select>
+                          </div>
+                          <div className="col-span-1 text-right">
+                            <button onClick={() => removeActivity(a.id)} className="px-2 py-1 text-gray-600 hover:text-red-600">×</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Field label="Notes / Case Plan">
+                    <textarea rows="4" className="w-full px-3 py-2 border rounded-md"
+                      value={notes} onChange={e => setNotes(e.target.value)}></textarea>
+                  </Field>
+
+                  <div className="space-y-2">
+                    <Field label="Import JSON">
+                      <textarea rows="3" placeholder="Paste previously exported JSON here"
+                        className="w-full px-3 py-2 border rounded-md"
+                        value={jsonText} onChange={e => setJsonText(e.target.value)}></textarea>
+                    </Field>
+                    <div className="flex gap-2">
+                      <button onClick={importJSON} className="px-3 py-2 text-sm rounded-md border bg-white hover:bg-gray-50">Load</button>
+                      <button onClick={exportJSON} className="px-3 py-2 text-sm rounded-md border bg-white hover:bg-gray-50">Save</button>
+                    </div>
+                  </div>
+
+                  {/* 🔵 NEW: Library (localStorage) */}
+                  <SectionTitle emoji="📚">Library (saved pathways)</SectionTitle>
+                  <div className="space-y-2">
+                    <div className="flex gap-2 items-center">
+                      <select className="flex-1 h-10 px-3 border rounded-md" value={selectedId}
+                        onChange={e => loadFromLibrary(e.target.value)}>
+                        <option value="">— Select a saved pathway —</option>
+                        {records.map(r => (
+                          <option key={r.id} value={r.id}>
+                            {r.name} • {new Date(r.savedAt).toLocaleDateString()}
+                          </option>
+                        ))}
+                      </select>
+                      <button onClick={saveToLibrary} className="px-3 py-2 text-sm rounded-md border bg-white hover:bg-gray-50">
+                        Save to Library
+                      </button>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        disabled={!selectedId}
+                        onClick={() => deleteFromLibrary(selectedId)}
+                        className="px-3 py-2 text-sm rounded-md border bg-white hover:bg-gray-50 disabled:opacity-50">
+                        Delete Selected
+                      </button>
+                    </div>
+                    <div className="text-[11px] text-gray-500">
+                      Tip: The Library saves to <code>localStorage</code> on this device/browser.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: Map */}
+              <div className="lg:col-span-2 print:col-span-2">
+                <div className={`bg-white rounded-xl border shadow-sm ${compact ? "p-3" : "p-6"}`}>
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <div className="text-xl font-semibold">Career Pathway</div>
+                      <div className="text-sm text-gray-600">
+                        Target: {participant.targetOccupation} • Wage Goal: ${participant.wageGoal}/hr • Timeline: {participant.timelineMonths} mo
+                      </div>
+                      <div className="text-xs text-gray-500">Credential(s): {participant.credentialTarget}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm text-gray-700 font-medium">Legend</div>
+                      <div className="flex gap-2 mt-1 flex-wrap">
+                        {["Planned","In Progress","Completed"].map(s => (
+                          <span key={s} className={`px-2 py-0.5 text-xs rounded-full border ${STATUS_COLORS[s]}`}>{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-7 gap-3">
+                    {PHASES.map(phase => (
+                      <div key={phase.key} className="relative">
+                        <div className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b px-2 py-1 rounded-t-md">
+                          <div className="text-xs uppercase tracking-wide text-gray-500">{phase.label}</div>
+                        </div>
+                        <div className="space-y-2 pt-2">
+                          {phaseBuckets[phase.key].length === 0 && (
+                            <div className="text-xs text-gray-400 border border-dashed rounded-md p-2">No steps yet.</div>
+                          )}
+                          {phaseBuckets[phase.key].map(step => (
+                            <div key={step.id} className={`border rounded-md p-2 shadow-sm ${STATUS_COLORS[step.status]} bg-opacity-60`}>
+                              <div className="text-sm font-medium leading-tight">{step.label}</div>
+                              <div className="flex items-center justify-between mt-1 text-[11px] opacity-80">
+                                <span>Status: {step.status}</span>
+                                <span>→</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="col-span-1 border-dashed border rounded-lg">
+                      <div className="p-3">
+                        <div className="text-sm font-semibold mb-2">Participant Snapshot</div>
+                        <div className="text-xs text-gray-600 space-y-1">
+                          <div><strong>Name:</strong> {participant.name}</div>
+                          <div><strong>Population:</strong> {participant.population} • <strong>Age:</strong> {participant.age}</div>
+                          <div><strong>Education:</strong> {participant.education} • <strong>Veteran:</strong> {participant.veteran ? "Yes" : "No"}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="col-span-1 border-dashed border rounded-lg">
+                      <div className="p-3">
+                        <div className="text-sm font-semibold mb-2">Barriers Selected</div>
+                        <div className="flex flex-wrap gap-1">
+                          {barriers.length === 0 && <span className="text-xs text-gray-400">None</span>}
+                          {barriers.map(b => (
+                            <span key={b} className="text-[11px] bg-gray-100 border rounded px-2 py-0.5">
+                              {BARRIER_LIBRARY.find(x => x.key === b)?.label}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="col-span-1 border-dashed border rounded-lg">
+                      <div className="p-3">
+                        <div className="text-sm font-semibold mb-2">Case Notes</div>
+                        <div className="text-xs whitespace-pre-wrap text-gray-700">{notes}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 text-[11px] text-gray-500">
+                    <div><strong>Tip:</strong> Use <em>Print</em> to save as PDF, or <em>Export JSON</em> to reuse this plan later.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <style>{`
+            @media print {
+              body { background: white; }
+              .print\\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+              .print\\:col-span-2 { grid-column: span 2 / span 2; }
+              .print\\:col-span-1 { grid-column: span 1 / span 1; }
+            }
+          `}</style>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
