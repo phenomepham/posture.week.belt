@@ -36,36 +36,37 @@
     ];
 
     const BARRIER_LIBRARY = [
-      { key: "transport", label: "Transportation (Assistance)", recommend: ["Bus pass / gas card"] },
-      { key: "childcare", label: "Childcare", recommend: ["Childcare referral", "Supportive services policy"] },
-      { key: "Transport car", label: "Transportation (Vehicle)", recommend: ["Repair"] },
-      { key: "NRP", label: "Needs Related Payment", recommend: ["Justification"] },
-      { key: "housing", label: "Housing Instability", recommend: ["One-time rent/utility support", "Utility support"] },
-      { key: "justice", label: "Justice-Involved", recommend: ["Reentry program (e.g., Metro 180)"] },
+      { key: "transport", label: "Transportation (Assistance)", recommend: ["481 Bus pass / gas card"] },
+      { key: "childcare", label: "Childcare", recommend: ["Childcare referral", "480 Supportive services policy"] },
+      { key: "Transport car", label: "Transportation (Vehicle)", recommend: ["481 Estimates + Repair"] },
+      { key: "NRP", label: "Needs Related Payment", recommend: ["490 Justification"] },
+      { key: "housing", label: "Housing Instability", recommend: ["483 One-time rent/utility support", "483 Utility support"] },
+      { key: "justice", label: "Justice-Involved", recommend: ["Reentry program (e.g., Metro 180 RAP)"] },
       { key: "language", label: "Limited English", recommend: ["ESL referral"] },
       { key: "disability", label: "Disability", recommend: ["VR referral", "Accommodation plan"] },
       { key: "other", label: "Other", recommend: ["Detail in casenote"] },
       { key: "parenting/pregnant", label: "Parenting", recommend: ["Childcare, Referral, SNAP"] },
-      { key: "homeless", label: "Experiencing Homelessness", recommend: ["Housing Support, Rental Support, Legal Aid"] },
+      { key: "homeless", label: "Experiencing Homelessness", recommend: ["483 Housing Support, Rental Support, Legal Aid"] },
       { key: "fostercare", label: "In or aged out of fostercare", recommend: ["Referrals"] },
-      { key: "HS dropout", label: "High School Dropout", recommend: ["GED program", "Diploma Recovery", "GED Prep"] },
+      { key: "HS dropout", label: "High School Dropout", recommend: ["418 GED program", "Diploma Recovery", "406 GED Prep"] },
       { key: "work", label: "Limited Work Experience", recommend: ["Soft skills Coaching", "Work Experience"] },
-      { key: "tools", label: "Training/Work Tools", recommend: ["Tools to perform job purchase"] },
-      { key: "Training", label: "Testing fees/Training Costs", recommend: ["ETPL training", "NCRC Silver", "Enrollment Agreement"] },
+      { key: "tools", label: "Training/Work Tools", recommend: ["487 Tools to perform job purchase"] },
+      { key: "Training", label: "Testing fees/Training Costs", recommend: ["421 ETPL training", "NCRC Silver", "Enrollment Agreement"] },
+      { key: "Skills Upgrade", label: "Prereq Courses", recommend: ["485 Course Cost + Tools",] },
     ];
 
     const ACTIVITY_LIBRARY = [
       { key: "orientation", phase: "engagement", label: "WIOA Orientation + NEWORKS" },
       { key: "eligibility", phase: "engagement", label: "Eligibility Verification" },
       { key: "assessments", phase: "assessment", label: "NCRC" },
-      { key: "OAS", phase: "engagement", label: "Objective Assessment" },
-      { key: "ONET", phase: "assessment", label: "ONET" },
-      { key: "iss", phase: "assessment", label: "ISS Goals + Objectives" },
+      { key: "OAS", phase: "engagement", label: "412 Objective Assessment" },
+      { key: "ONET", phase: "assessment", label: "422 ONET" },
+      { key: "iss", phase: "assessment", label: "413 ISS Goals + Objectives" },
       { key: "resume", phase: "career", label: "Resume + Interview Coaching" },
       { key: "jobsearch", phase: "career", label: "Job Search (Staff Assisted)" },
-      { key: "ita", phase: "training", label: "ITA for Occupational Training" },
-      { key: "wex", phase: "training", label: "Work Experience (WEX)" },
-      { key: "ojt", phase: "training", label: "On-the-Job Training (OJT)" },
+      { key: "ita", phase: "training", label: "421 ITA for Occupational Training" },
+      { key: "wex", phase: "training", label: "425 Work Experience (WEX)" },
+      { key: "ojt", phase: "training", label: "428 On-the-Job Training (OJT)" },
       { key: "support", phase: "support", label: "Supportive Services" },
       { key: "placement", phase: "placement", label: "Job Placement + Retention Plan" },
       { key: "MSG", phase: "assessment", label: "Measureable Skills Gain" },
@@ -74,7 +75,7 @@
       { key: "incentive", phase: "followup", label: "Activity Incentives" },
       { key: "ONET", phase: "assessment", label: "Interest Profiler" },
       { key: "Monthly Contact", phase: "engagement", label: "Monthly contact with CN" },
-      { key: "Apprenticeship", phase: "training", label: "Apprenticeship" },
+      { key: "Apprenticeship", phase: "training", label: "320 Apprenticeship" },
     ];
 
     const STATUS_COLORS = {
@@ -551,4 +552,5 @@
   </script>
 </body>
 </html>
+
 
