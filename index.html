@@ -135,6 +135,21 @@
       );
       const [compact, setCompact] = useState(false);
       const [jsonText, setJsonText] = useState("");
+      // 🔵 Print pathway-only
+const [pathwayOnly, setPathwayOnly] = useState(false);
+
+useEffect(() => {
+  document.body.classList.toggle("print-pathway-only", pathwayOnly);
+}, [pathwayOnly]);
+
+function printPathwayOnlyNow() {
+  setPathwayOnly(true);
+  setTimeout(() => {
+    window.print();
+    setTimeout(() => setPathwayOnly(false), 0);
+  }, 0);
+}
+
 
       // 🔵 NEW: Records state
       const [records, setRecords] = useState([]);
@@ -272,9 +287,39 @@
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 text-sm text-gray-700">
-                  <input type="checkbox" className="h-4 w-4" checked={compact} onChange={e => setCompact(e.target.checked)} />
-                  Compact
+  <label className="flex items-center gap-2 text-sm text-gray-700">
+    <input
+      type="checkbox"
+      className="h-4 w-4"
+      checked={compact}
+      onChange={e => setCompact(e.target.checked)}
+    />
+    Compact
+  </label>
+
+  <label className="flex items-center gap-2 text-sm text-gray-700">
+    <input
+      type="checkbox"
+      className="h-4 w-4"
+      checked={pathwayOnly}
+      onChange={e => setPathwayOnly(e.target.checked)}
+    />
+    Print pathway only
+  </label>
+
+  <button onClick={exportJSON} className="px-3 py-2 text-sm rounded-md border bg-white hover:bg-gray-50">
+    Export JSON
+  </button>
+
+  <button onClick={() => window.print()} className="px-3 py-2 text-sm rounded-md border bg-white hover:bg-gray-50">
+    Print
+  </button>
+
+  <button onClick={printPathwayOnlyNow} className="px-3 py-2 text-sm rounded-md border bg-white hover:bg-gray-50">
+    Quick print pathway
+  </button>
+</div>
+
                 </label>
                 <button onClick={exportJSON} className="px-3 py-2 text-sm rounded-md border bg-white hover:bg-gray-50">Export JSON</button>
                 <button onClick={() => window.print()} className="px-3 py-2 text-sm rounded-md border bg-white hover:bg-gray-50">Print</button>
@@ -452,7 +497,7 @@
 
               {/* Right: Map */}
               <div className="lg:col-span-2 print:col-span-2">
-                <div className={`bg-white rounded-xl border shadow-sm ${compact ? "p-3" : "p-6"}`}>
+                <div id="print-pathway-root" className={`bg-white rounded-xl border shadow-sm ${compact ? "p-3" : "p-6"}`}>
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <div className="text-xl font-semibold">Career Pathway</div>
@@ -542,6 +587,23 @@
               .print\\:col-span-2 { grid-column: span 2 / span 2; }
               .print\\:col-span-1 { grid-column: span 1 / span 1; }
             }
+            /* 🔵 NEW: Hide everything but the pathway card when print-pathway-only mode is active */
+@media print {
+  body.print-pathway-only * {
+    visibility: hidden !important;
+  }
+  body.print-pathway-only #print-pathway-root,
+  body.print-pathway-only #print-pathway-root * {
+    visibility: visible !important;
+  }
+  body.print-pathway-only #print-pathway-root {
+    position: absolute !important;
+    inset: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: 0 !important;
+  }
+}
           `}</style>
         </div>
       );
@@ -552,6 +614,7 @@
   </script>
 </body>
 </html>
+
 
 
 
