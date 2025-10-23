@@ -16,7 +16,7 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useMemo, useRef, useState, useEffect } = React; // 🔵 NEW: added useEffect
+    const { useMemo, useState, useEffect } = React; // 🔵 NEW: added useEffect
 
     // 🔵 NEW: Storage helpers
     const STORAGE_KEY = "wioa_pathways_v1";
@@ -73,7 +73,7 @@
       { key: "cred", phase: "followup", label: "Credential" },
       { key: "follow", phase: "followup", label: "Follow-Up Contacts" },
       { key: "incentive", phase: "followup", label: "Activity Incentives" },
-      { key: "ONET", phase: "assessment", label: "Interest Profiler" },
+      { key: "Career Profiler", phase: "assessment", label: "Interest Profiler" },
       { key: "Monthly Contact", phase: "engagement", label: "Monthly contact with CN" },
       { key: "Apprenticeship", phase: "training", label: "320 Apprenticeship" },
     ];
@@ -316,19 +316,15 @@ function printPathwayOnlyNow() {
   </button>
 
   <button onClick={printPathwayOnlyNow} className="px-3 py-2 text-sm rounded-md border bg-white hover:bg-gray-50">
-    Quick print pathway
-  </button>
-</div>
+  Quick print pathway
+</button>
+</div>   {/* closes: controls row .flex items-center gap-3 */}
+</div>   {/* closes: header .flex items-center justify-between mb-4 */}
 
-                </label>
-                <button onClick={exportJSON} className="px-3 py-2 text-sm rounded-md border bg-white hover:bg-gray-50">Export JSON</button>
-                <button onClick={() => window.print()} className="px-3 py-2 text-sm rounded-md border bg-white hover:bg-gray-50">Print</button>
-              </div>
-            </div>
+<div className="grid grid-cols-1 lg:grid-cols-3 gap-4 print:grid-cols-3">
+  {/* Left: Inputs */}
+  <div className="lg:col-span-1 print:col-span-1">
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 print:grid-cols-3">
-              {/* Left: Inputs */}
-              <div className="lg:col-span-1 print:col-span-1">
                 <div className="p-4 space-y-6 bg-white rounded-xl border shadow-sm">
                   <SectionTitle emoji="🧑‍💼">Participant</SectionTitle>
                   <div className="grid grid-cols-2 gap-3">
@@ -614,6 +610,7 @@ function printPathwayOnlyNow() {
   </script>
 </body>
 </html>
+
 
 
 
